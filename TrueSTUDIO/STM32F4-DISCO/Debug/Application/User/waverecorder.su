@@ -1,0 +1,5 @@
+waverecorder.c:123:9:WaveRecorderStart	0	static
+waverecorder.c:133:10:WaveRecorderStop	8	static
+waverecorder.c:143:6:WaveRecorderProcess	56	static
+waverecorder.c:248:6:BSP_AUDIO_IN_TransferComplete_CallBack	8	static
+waverecorder.c:281:6:BSP_AUDIO_IN_HalfTransfer_CallBack	8	static
