@@ -50,7 +50,8 @@ extern __IO uint32_t LEDsState;
 
 /* Beat Tracking Variables */
 uint8_t beat[1] = {0};
-uint8_t buttons[2] = {0x00, 0x00};
+uint8_t buttons[2] = {0x00, 0x00}; // TODO: Make this an array of 8 char's and then check all index's of each char on each beat play - add sounds - play
+// char * buttonChars[8] = {};
 uint8_t beatFlag = 0;
 
 /* USB Variables */
@@ -137,21 +138,24 @@ int main(void)
   /* Turn ON LED4: start of application */
   BSP_LED_On(LED4);
 
-  /*##-1- Link the USB Host disk I/O driver ##################################*/
+  /*##-1- Link the USB Host disk I/O driver */
   if(FATFS_LinkDriver(&USBH_Driver, USBDISKPath) == 0)
   {
-    /*##-2- Init Host Library ################################################*/
+    /*##-2- Init Host Library */
     USBH_Init(&hUSBHost, USBH_UserProcess, 0);
 
-    /*##-3- Add Supported Class ##############################################*/
+    /*##-3- Add Supported Class */
     USBH_RegisterClass(&hUSBHost, USBH_MSC_CLASS);
 
-    /*##-4- Start Host Process ###############################################*/
+    /*##-4- Start Host Process */
     USBH_Start(&hUSBHost);
 
     /* Run Application (Blocking mode)*/
     while (1)
     {
+    	// TODO: receive and set volume
+    	// TODO: receive and set tempo
+
     	if (beatFlag == 1){
     		//compute the beat
     		//send beat to F0
@@ -169,12 +173,13 @@ int main(void)
 			UartReady = RESET;
 
 			//play the beat
-			if(buttons[beat[0]] == 1){
+			if(buttons[beat[0]] == 1){ // TODO: Check if buttons[beat[0].charAt(i)] kinda vibes
 				playBeat();
 			}
 
+			// TODO: Implement for 8x8
 			//move to the next beat
-			if (beat[0] == 1){
+			if (beat[0] == 1){ // if beat[0] == 8
 				beat[0] = 0;
 			}
 			else{
@@ -379,13 +384,11 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   {
 	  CmdIndex = CMD_PLAY;
 	  BSP_LED_On(LED4);
-	  WavePlayerStart();
+	  WavePlayerStart(); // TODO: Check that this isn't calling a change buffer method
 	  HAL_Delay(10);
 	  BSP_LED_Off(LED4);
   }
 }
-
-
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *UartHandle) {
 	BSP_LED_On(LED3);
