@@ -68,6 +68,7 @@ extern __IO uint32_t RepeatState, PauseResumeStatus, PressCount;
 /* Audio Play Start variable. 
    Defined as external in main.c*/
 __IO uint32_t AudioPlayStart = 0;
+char* WAVE_NAME = "0:/audio_sample1.wav";
 
 /* Audio wave data length to be played */
 static uint32_t WaveDataLength = 0;
@@ -283,6 +284,7 @@ void BSP_AUDIO_OUT_HalfTransfer_CallBack(void)
 void BSP_AUDIO_OUT_TransferComplete_CallBack(void)
 {
   buffer_offset = BUFFER_OFFSET_FULL;
+  //BSP_AUDIO_OUT_Stop(CODEC_PDWN_HW);
   BSP_AUDIO_OUT_ChangeBuffer((uint16_t*)&Audio_Buffer[0], AUDIO_BUFFER_SIZE / 2);
 }
 
@@ -316,6 +318,7 @@ void WavePlayerStart(void)
   /* Get the read out protection status */
   if(f_opendir(&Directory, path) == FR_OK)
   {
+	 BSP_LED_Off(LED3);
 	 // NOTE: if rec available check WaveRecStatus here (I removed it)
      wavefilename = WAVE_NAME;
     /* Open the Wave file to be played */
@@ -334,6 +337,9 @@ void WavePlayerStart(void)
       /* Play the Wave */
       WavePlayBack(waveformat.SampleRate);
     }    
+  }
+  else {
+	  BSP_LED_On(LED3);
   }
 }
 

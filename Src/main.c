@@ -23,7 +23,7 @@ __IO ITStatus UartReady = RESET;
 
 TIM_HandleTypeDef TimHandle;
 TIM_HandleTypeDef hTimLed;
-uint32_t uwPrescalerValue = 0;
+uint32_t uwPrescalerValue = 100;
 
 uint8_t aTxBuffer[TXBUFFERSIZE];
 uint8_t aRxBuffer[RXBUFFERSIZE];
@@ -37,7 +37,7 @@ __IO uint32_t PauseResumeStatus = IDLE_STATUS;
 __IO uint32_t CmdIndex = CMD_PLAY;
 
 extern uint32_t AudioPlayStart;
-
+extern char * WAVE_NAME;
 /* Re-play Wave file status on/off.
    Defined as external in waveplayer.c file */
 __IO uint32_t RepeatState = REPEAT_ON;
@@ -60,7 +60,7 @@ char USBDISKPath[4];         /* USB Host logical drive path */
 USBH_HandleTypeDef hUSBHost; /* USB Host handle */
 static uint8_t  USBH_USR_ApplicationState = USBH_USR_FS_INIT;
 
-MSC_ApplicationTypeDef AppliState = APPLICATION_IDLE;
+MSC_ApplicationTypeDef AppliState = APPLICATION_START;
 
 /* Private function prototypes -----------------------------------------------*/
 static void SystemClock_Config(void);
@@ -150,6 +150,11 @@ int main(void)
     /*##-4- Start Host Process */
     USBH_Start(&hUSBHost);
 
+    if (f_mount(&USBDISKFatFs, (TCHAR const*)USBDISKPath, 0 ) != FR_OK )
+        {
+          /* FatFs initialisation fails */
+          Error_Handler();
+        }
     /* Run Application (Blocking mode)*/
     while (1)
     {
@@ -174,6 +179,12 @@ int main(void)
 
 			//play the beat
 			if(buttons[beat[0]] == 1){ // TODO: Check if buttons[beat[0].charAt(i)] kinda vibes
+				if (beat[0] == 0) {
+					WAVE_NAME = "0:a1.wav";
+				}
+				else {
+					WAVE_NAME = "0:/audio_sample2.wav";
+				}
 				playBeat();
 			}
 
@@ -190,15 +201,15 @@ int main(void)
     		beatFlag = 0;
     	}
 
-    	switch(AppliState)
-    	{
-    		case APPLICATION_START:
-    			MSC_Application();
-    			break;
-    		case APPLICATION_IDLE:
-    		default:
-    			break;
-    	}
+//    	switch(AppliState)
+//    	{
+//    		case APPLICATION_START:
+//    			MSC_Application();
+//    			break;
+//    		case APPLICATION_IDLE:
+//    		default:
+//    			break;
+//    	}
     	/* USBH_Background Process */
     	USBH_Process(&hUSBHost);
     }
@@ -206,6 +217,7 @@ int main(void)
 }
 
 void playBeat() {
+	// BSP_AUDIO_OUT_Stop(CODEC_PDWN_HW);
 	CmdIndex = CMD_PLAY;
 	BSP_LED_On(LED5);
 	WavePlayerStart();
