@@ -1,35 +1,31 @@
+/**
+  ******************************************************************************
+  * @file    Audio/Audio_playback_and_record/Src/main.c
+  * @author  ES Team 5
+  * @version V1.3.5
+  * @date    October-2017
+  * @brief   Main program body.
+  * @note	 Uses wav files of length WaveDataFormat
+  ******************************************************************************
+**/
+
+
 #include "main.h"
+#include "mixer.h"
 #include "pdm_filter.h"
 
+uint8_t WaveDataLength = 0;
+/* Function Definitions */
 
-WAVE_FormatTypeDef WaveFormat;
-void mixer(uint8_t * track_one, uint8_t * track_two, uint8_t result[]);
-void mixTracks(char byteArray);
-void getTrack(uint8_t audioSampleNumber, uint8_t track[]);
-static uint32_t WavProcess_EncInit(uint32_t Freq, uint8_t* pHeader);
-static uint32_t WavProcess_HeaderInit(uint8_t* pHeader, WAVE_FormatTypeDef* pWaveFormatStruct);
-static uint32_t WavProcess_HeaderUpdate(uint8_t* pHeader, WAVE_FormatTypeDef* pWaveFormatStruct);
-static uint32_t WaveDataLength = 0;
-
-uint8_t pHeaderBuff[44];
-FIL resultFile;
-FIL FileRead;
-DIR Directory;
-
-typedef struct {
-  int32_t offset;
-  uint32_t fptr;
-}Audio_BufferTypeDef;
-
-Audio_BufferTypeDef  BufferCtl;
 void mixTracks(char byteArray) {
-	uint8_t result[WaveDataLength];
-	uint8_t track_two[WaveDataLength];
+	int16_t result[WaveDataLength];
+	int16_t track_two[WaveDataLength];
 	for (int i = 0; i < 8; i++) {
-		if ((byteArray) == 1) { // this is wrong for now
+		if ((byteArray & 0x01) == 1) {
 			getTrack(i, track_two);
 			mixer(result, track_two, result);
 		}
+		byteArray = byteArray >> 1;
 	}
 	// remove existing result wav
 	f_unlink ("result.wav");
@@ -38,7 +34,7 @@ void mixTracks(char byteArray) {
 		Error_Handler();
 	}
 	// initialize header file
-	WavProcess_EncInit(441000, pHeaderBuff);
+	WavProcess_EncInit(44100, pHeaderBuff);
 	// write header to resultFile
 	uint32_t byteswritten = 0;
 	f_write(&resultFile, pHeaderBuff, 44, (void *)&byteswritten);
@@ -58,12 +54,11 @@ void mixTracks(char byteArray) {
 /*
  * Takes in 3 arrays, adds the first two and saves result to the 3rd array
  */
-void mixer(uint8_t * track_one, uint8_t * track_two, uint8_t * result) {
-	// TODO: Test with dummy data
+void mixer(int16_t * track_one, int16_t * track_two, int16_t * result) {
 	for (int i = 0; i < WaveDataLength; i++) {
-		uint8_t a = track_one[i]; // first sample (-32768..32767)
-		uint8_t b = track_two[i]; // second sample
-		uint8_t m; // result
+		int a = (int) track_one[i]; // first sample (-32768..32767)
+		int b = (int) track_two[i]; // second sample
+		int m; // result
 		// Make both samples unsigned (0..65535)
 		a += 32768;
 		b += 32768;
@@ -81,7 +76,7 @@ void mixer(uint8_t * track_one, uint8_t * track_two, uint8_t * result) {
 		// Output is unsigned (0..65536) so convert back to signed (-32768..32767)
 		if (m == 65536) { m = 65535; };
 		m -= 32768;
-		result[i] = m;
+		result[i] = (int16_t) m;
 	}
 }
 
@@ -89,7 +84,7 @@ void mixer(uint8_t * track_one, uint8_t * track_two, uint8_t * result) {
  * track is the data from the file that is read
  * saves length to WaveDataLength
  */
-void getTrack(uint8_t audioSampleNumber, uint8_t track[]) {
+void getTrack(uint8_t audioSampleNumber, int16_t track[]) {
 	char path[] = "0:/";
 	UINT bytesread = 0;
 	WAVE_FormatTypeDef waveformat;
@@ -124,7 +119,7 @@ void getTrack(uint8_t audioSampleNumber, uint8_t track[]) {
   * @param  pHeader: Pointer to the WAV file header to be written.
   * @retval 0 if success, !0 else.
   */
-static uint32_t WavProcess_EncInit(uint32_t Freq, uint8_t* pHeader)
+uint32_t WavProcess_EncInit(uint32_t Freq, uint8_t* pHeader)
 {
   /* Initialize the encoder structure */
   WaveFormat.SampleRate = Freq;        /* Audio sampling frequency */
@@ -152,7 +147,7 @@ static uint32_t WavProcess_EncInit(uint32_t Freq, uint8_t* pHeader)
   * @param  pWaveFormatStruct: Pointer to the wave structure to be filled.
   * @retval 0 if passed, !0 if failed.
   */
-static uint32_t WavProcess_HeaderInit(uint8_t* pHeader, WAVE_FormatTypeDef* pWaveFormatStruct)
+uint32_t WavProcess_HeaderInit(uint8_t* pHeader, WAVE_FormatTypeDef* pWaveFormatStruct)
 {
   /* Write chunkID, must be 'RIFF'  ------------------------------------------*/
   pHeader[0] = 'R';
@@ -238,7 +233,7 @@ static uint32_t WavProcess_HeaderInit(uint8_t* pHeader, WAVE_FormatTypeDef* pWav
   * @param  pWaveFormatStruct: Pointer to the wave structure to be filled.
   * @retval 0 if passed, !0 if failed.
   */
-static uint32_t WavProcess_HeaderUpdate(uint8_t* pHeader, WAVE_FormatTypeDef* pWaveFormatStruct)
+uint32_t WavProcess_HeaderUpdate(uint8_t* pHeader, WAVE_FormatTypeDef* pWaveFormatStruct)
 {
   /* Write the file length ----------------------------------------------------*/
   /* The sampling time: this value will be be written back at the end of the
