@@ -49,7 +49,7 @@
 #include "../Components/cs43l22/cs43l22.h"
 
 #include "stm32f4_discovery.h"
-#include "D:/UCT/ESProject/en.stm32cubef4/STM32Cube_FW_F4_V1.16.0/Middlewares/ST/STM32_Audio/Addons/PDM/pdm_filter.h"
+#include "pdm_filter.h"
 
 /** @addtogroup BSP
   * @{

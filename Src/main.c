@@ -97,7 +97,7 @@ int main(void)
   /* Timer Config */
   uwPrescalerValue = (uint32_t) ((SystemCoreClock /2) / 10000) - 1;
   TimHandle.Instance = TIM3;
-  TimHandle.Init.Period = 10000 - 1;
+  TimHandle.Init.Period = 16000 - 1;
   TimHandle.Init.Prescaler = uwPrescalerValue;
   TimHandle.Init.ClockDivision = 0;
   TimHandle.Init.CounterMode = TIM_COUNTERMODE_UP;
