@@ -95,7 +95,7 @@ typedef enum
 }
 MSC_ApplicationTypeDef;
 /* You can change the Wave file name as you need, but do not exceed 11 characters */
-//char* WAVE_NAME = "0:audio_sample.wav";
+#define wavename = "0:a1.wav";
 //#define WAVE_NAME "0:a1.wav"
   
 /* State Machine for the USBH_USR_ApplicationState */

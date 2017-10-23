@@ -14,39 +14,40 @@
 #include "mixer.h"
 #include "pdm_filter.h"
 
-uint8_t WaveDataLength = 0;
+extern char * WAVE_NAME;
+uint8_t WaveDataLength = 0; // NOTE: Set WaveDataLength here
+int16_t result[204];
 /* Function Definitions */
 
 void mixTracks(char byteArray) {
-	int16_t result[WaveDataLength];
-	int16_t track_two[WaveDataLength];
+	int16_t next_track[204];
 	for (int i = 0; i < 8; i++) {
 		if ((byteArray & 0x01) == 1) {
-			getTrack(i, track_two);
-			mixer(result, track_two, result);
+			getTrack(i, next_track);
+			mixer(result, next_track, result);
 		}
 		byteArray = byteArray >> 1;
 	}
 	// remove existing result wav
-	f_unlink ("result.wav");
+	// f_unlink ("result.wav");
 	// create resultFile from result
-	if (f_open(&resultFile,"result.wav", FA_CREATE_ALWAYS | FA_WRITE) != FR_OK) {
-		Error_Handler();
-	}
-	// initialize header file
-	WavProcess_EncInit(44100, pHeaderBuff);
-	// write header to resultFile
-	uint32_t byteswritten = 0;
-	f_write(&resultFile, pHeaderBuff, 44, (void *)&byteswritten);
-	// Update the data length in the header of the recorded Wave
-	f_lseek(&resultFile, 0);
-	// Parse the wav file header and extract required information
-	WavProcess_HeaderUpdate(pHeaderBuff, &WaveFormat);
-	f_write(&resultFile, pHeaderBuff, 44, (void*)&byteswritten);
-
-	/* Close file and unmount MyFilesystem */
-	f_close (&resultFile);
-	f_mount(NULL, 0, 1);
+//	if (f_open(&resultFile,"0:result.wav", FA_WRITE | FA_CREATE_ALWAYS) != FR_OK) {
+//		Error_Handler();
+//	}
+//	// initialize header file
+//	WavProcess_EncInit(44100, pHeaderBuff);
+//	// write header to resultFile
+//	uint32_t byteswritten = 0;
+//	f_write(&resultFile, pHeaderBuff, 44, (void *)&byteswritten);
+//	// Update the data length in the header of the recorded Wave
+//	f_lseek(&resultFile, 0);
+//	// Parse the wav file header and extract required information
+//	WavProcess_HeaderUpdate(pHeaderBuff, &WaveFormat);
+//	f_write(&resultFile, pHeaderBuff, 44, (void*)&byteswritten);
+//
+//	/* Close file and unmount MyFilesystem */
+//	f_close (&resultFile);
+//	f_mount(NULL, 0, 1);
 
 	// save file to USB
 }
@@ -89,9 +90,9 @@ void getTrack(uint8_t audioSampleNumber, int16_t track[]) {
 	UINT bytesread = 0;
 	WAVE_FormatTypeDef waveformat;
 
-	if(f_opendir(&Directory, path) == FR_OK)
-	 {
-		char* wavefilename = "0:audio_sample" + audioSampleNumber; //hacked
+//	if(f_opendir(&Directory, path) == FR_OK)
+//	 {
+		char* wavefilename = "a1.wav";
 		/* Open the Wave file to be read */
 		if(f_open(&FileRead, wavefilename , FA_READ) != FR_OK)
 		{
@@ -100,13 +101,15 @@ void getTrack(uint8_t audioSampleNumber, int16_t track[]) {
 		else
 		{
 			/* Read sizeof(WaveFormat) from the selected file */
-
 			f_read(&FileRead, &waveformat, sizeof(waveformat), &bytesread);
 
 			/* Set WaveDataLength to the Speech Wave length */
 			WaveDataLength = waveformat.FileSize;
 		}
-	 }
+//	 }
+//	else {
+//		Error_Handler();
+//	}
 	// fetch file from USB
 	f_lseek(&FileRead, 0);
 	f_read(&FileRead, &track[0], WaveDataLength, &bytesread); // want to read the whole thing to the audio array

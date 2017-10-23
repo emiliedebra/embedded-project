@@ -67,6 +67,7 @@ FIL resultFile;
 FIL FileRead;
 DIR Directory;
 
+//char * WAVE_NAME = "0:a1.wav";
 typedef struct {
   int32_t offset;
   uint32_t fptr;

@@ -6,51 +6,11 @@
   * @date    17-February-2017
   * @brief   I2S Audio player program. 
   ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; Copyright (c) 2017 STMicroelectronics International N.V. 
-  * All rights reserved.</center></h2>
-  *
-  * Redistribution and use in source and binary forms, with or without 
-  * modification, are permitted, provided that the following conditions are met:
-  *
-  * 1. Redistribution of source code must retain the above copyright notice, 
-  *    this list of conditions and the following disclaimer.
-  * 2. Redistributions in binary form must reproduce the above copyright notice,
-  *    this list of conditions and the following disclaimer in the documentation
-  *    and/or other materials provided with the distribution.
-  * 3. Neither the name of STMicroelectronics nor the names of other 
-  *    contributors to this software may be used to endorse or promote products 
-  *    derived from this software without specific written permission.
-  * 4. This software, including modifications and/or derivative works of this 
-  *    software, must execute solely and exclusively on microcontroller or
-  *    microprocessor devices manufactured by or for STMicroelectronics.
-  * 5. Redistribution and use of this software other than as permitted under 
-  *    this license is void and will automatically terminate your rights under 
-  *    this license. 
-  *
-  * THIS SOFTWARE IS PROVIDED BY STMICROELECTRONICS AND CONTRIBUTORS "AS IS" 
-  * AND ANY EXPRESS, IMPLIED OR STATUTORY WARRANTIES, INCLUDING, BUT NOT 
-  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A 
-  * PARTICULAR PURPOSE AND NON-INFRINGEMENT OF THIRD PARTY INTELLECTUAL PROPERTY
-  * RIGHTS ARE DISCLAIMED TO THE FULLEST EXTENT PERMITTED BY LAW. IN NO EVENT 
-  * SHALL STMICROELECTRONICS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-  * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
-  * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, 
-  * OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF 
-  * LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
-  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
-  * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-  *
-  ******************************************************************************
-  */ 
+**/
 
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-
-/** @addtogroup STM32F4-Discovery_Audio_Player_Recorder
-* @{
-*/ 
+#include "mixer.h"
 
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
@@ -64,12 +24,11 @@
 __IO uint32_t LEDsState;
 
 extern __IO uint32_t RepeatState, PauseResumeStatus, PressCount;
-
 /* Audio Play Start variable. 
    Defined as external in main.c*/
 __IO uint32_t AudioPlayStart = 0;
-char* WAVE_NAME = "0:/audio_sample1.wav";
-
+char* WAVE_NAME = "0:a1.wav";
+//extern int16_t * result;
 /* Audio wave data length to be played */
 static uint32_t WaveDataLength = 0;
 
@@ -130,17 +89,18 @@ void WavePlayBack(uint32_t AudioFreq)
   AudioRemSize = WaveDataLength - bytesread;
   
   /* Start playing Wave */
-  BSP_AUDIO_OUT_Play((uint16_t*)&Audio_Buffer[0], AUDIO_BUFFER_SIZE);
-  BSP_LED_Toggle(LED6);
-  PauseResumeStatus = RESUME_STATUS;
-  PressCount = 0;
- 
+//  BSP_AUDIO_OUT_Play((uint16_t*)&result[0], sizeof(result)/16);
+   BSP_AUDIO_OUT_Play((uint16_t*)&Audio_Buffer[0], AUDIO_BUFFER_SIZE);
+//   BSP_LED_Toggle(LED6);
+   PauseResumeStatus = RESUME_STATUS;
+   PressCount = 0;
+
   /* Check if the device is connected.*/
   while((AudioRemSize != 0) && (AppliState != APPLICATION_IDLE))
-  { 
+  {
     /* Test on the command: Playing */
     if(CmdIndex == CMD_PLAY)
-    { 
+    {
       if(PauseResumeStatus == PAUSE_STATUS)
       {
         /* Stop Toggling LED2 to signal Pause */
@@ -151,35 +111,35 @@ void WavePlayBack(uint32_t AudioFreq)
       }
       else if(PauseResumeStatus == RESUME_STATUS)
       {
-        /* Toggling LED6 to signal Play */
+//        /* Toggling LED6 to signal Play */
         BSP_LED_Toggle(LED6);
-        /* Resume playing Wave */
+//        /* Resume playing Wave */
         WavePlayerPauseResume(PauseResumeStatus);
         PauseResumeStatus = IDLE_STATUS;
-      }  
+      }
 
       bytesread = 0;
-      
+
       if(buffer_offset == BUFFER_OFFSET_HALF)
       {
-        
-        f_read(&FileRead, 
-               &Audio_Buffer[0], 
-               AUDIO_BUFFER_SIZE/2, 
-               (void *)&bytesread); 
-          
+
+        f_read(&FileRead,
+               &Audio_Buffer[0],
+               AUDIO_BUFFER_SIZE/2,
+               (void *)&bytesread);
+
           buffer_offset = BUFFER_OFFSET_NONE;
       }
-      
+
       if(buffer_offset == BUFFER_OFFSET_FULL)
       {
-        f_read(&FileRead, 
-               &Audio_Buffer[AUDIO_BUFFER_SIZE/2], 
-               AUDIO_BUFFER_SIZE/2, 
-               (void *)&bytesread); 
-          
+        f_read(&FileRead,
+               &Audio_Buffer[AUDIO_BUFFER_SIZE/2],
+               AUDIO_BUFFER_SIZE/2,
+               (void *)&bytesread);
+
           buffer_offset = BUFFER_OFFSET_NONE;
-      } 
+      }
       if(AudioRemSize > (AUDIO_BUFFER_SIZE / 2))
       {
         AudioRemSize -= bytesread;
@@ -189,7 +149,7 @@ void WavePlayBack(uint32_t AudioFreq)
         AudioRemSize = 0;
       }
     }
-    else 
+    else
     {
       /* Stop playing Wave */
       WavePlayerStop();
@@ -304,11 +264,11 @@ void BSP_AUDIO_OUT_Error_CallBack(void)
 }
 
 /**
-  * @brief  Starts Wave player.
+  * @brief  fetches File
   * @param  None
   * @retval None
   */
-void WavePlayerStart(void)
+void fetchFile(char * name)
 {
   UINT bytesread = 0;
   char path[] = "0:/";
@@ -319,28 +279,39 @@ void WavePlayerStart(void)
   if(f_opendir(&Directory, path) == FR_OK)
   {
 	 BSP_LED_Off(LED3);
-	 // NOTE: if rec available check WaveRecStatus here (I removed it)
-     wavefilename = WAVE_NAME;
+     wavefilename = name;
     /* Open the Wave file to be played */
     if(f_open(&FileRead, wavefilename , FA_READ) != FR_OK)
     {
       BSP_LED_On(LED5);
     }
     else
-    {    
+    {
       /* Read sizeof(WaveFormat) from the selected file */
       f_read (&FileRead, &waveformat, sizeof(waveformat), &bytesread);
-      
+
       /* Set WaveDataLenght to the Speech Wave length */
       WaveDataLength = waveformat.FileSize;
 
       /* Play the Wave */
-      WavePlayBack(waveformat.SampleRate);
-    }    
+      //WavePlayBack(waveformat.SampleRate);
+      UINT bytesread = 0;
+      f_lseek(&FileRead, 0);
+	  uint8_t array[WaveDataLength];
+	  f_read(&FileRead, &array[0], WaveDataLength, &bytesread);
+	  /* Close file */
+	  f_close(&FileRead);
+	  if(BSP_AUDIO_OUT_Init(OUTPUT_DEVICE_AUTO, 70, 44100) == AUDIO_OK)
+	    {
+		  BSP_AUDIO_OUT_Play((uint16_t*)&array[0], WaveDataLength);
+	    }
+//	  WavePlayerStop();
+    }
   }
   else {
 	  BSP_LED_On(LED3);
   }
+
 }
 
 /**
