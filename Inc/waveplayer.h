@@ -87,8 +87,8 @@ int   WavePlayerInit(uint32_t AudioFreq);
 void  WavePlayerStop(void);
 void  WavePlayerPauseResume(uint32_t state);
 void  fetchFile(char byteArray);
-void  mixFiles(uint8_t * audioFile, uint8_t * tempFile);
-void  playFile(uint8_t * audioFile);
+void  mixFiles(int16_t * audioFile, int16_t * tempFile);
+void  playFile(int16_t * audioFile);
 void  WavePlayer_CallBack(void);
 #endif /* __WAVEPLAYER_H */
 

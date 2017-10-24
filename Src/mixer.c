@@ -60,24 +60,26 @@ void mixer(int16_t * track_one, int16_t * track_two, int16_t * result) {
 		int a = (int) track_one[i]; // first sample (-32768..32767)
 		int b = (int) track_two[i]; // second sample
 		int m; // result
-		// Make both samples unsigned (0..65535)
-		a += 32768;
-		b += 32768;
-
-		// Pick the equation
-		if ((a < 32768) || (b < 32768)) {
-			// Viktor's first equation when both sources are "quiet"
-			// (i.e. less than middle of the dynamic range)
-			m = a * b / 32768;
-		} else {
-			// Viktor's second equation when one or both sources are loud
-			m = 2 * (a + b) - (a * b) / 32768 - 65536;
-		}
+//		// Make both samples unsigned (0..65535)
+//		a += 32768;
+//		b += 32768;
+//
+//		// Pick the equation
+//		if ((a < 32768) || (b < 32768)) {
+//			// Viktor's first equation when both sources are "quiet"
+//			// (i.e. less than middle of the dynamic range)
+//			m = a * b / 32768;
+//		} else {
+//			// Viktor's second equation when one or both sources are loud
+//			m = 2 * (a + b) - (a * b) / 32768 - 65536;
+//		}
+		m =  2*(a + b) - ((a*b)/128) - 256;
+		//combined[i] = Math.round(sample);
 
 		// Output is unsigned (0..65536) so convert back to signed (-32768..32767)
-		if (m == 65536) { m = 65535; };
-		m -= 32768;
-		result[i] = (int16_t) m;
+//		if (m == 65536) { m = 65535; };
+//		m -= 32768;
+		result[i] = m;
 	}
 }
 

@@ -36,7 +36,7 @@ static uint32_t WaveDataLength = 0;
 static __IO uint32_t AudioRemSize = 0;
 
 /* Ping-Pong buffer used for audio play */
-uint8_t Audio_Buffer[AUDIO_BUFFER_SIZE];
+int16_t Audio_Buffer[AUDIO_BUFFER_SIZE];
 
 /* Position in the audio play buffer */
 __IO BUFFER_StateTypeDef buffer_offset = BUFFER_OFFSET_NONE;
@@ -274,7 +274,7 @@ void fetchFile(char byteArray)
   char path[] = "0:/";
   char* wavefilename = NULL;
   WAVE_FormatTypeDef waveformat;
-  uint8_t audioFile[64200];
+  int16_t audioFile[64200];
   if(f_opendir(&Directory, path) == FR_OK)
   {
 	 BSP_LED_Off(LED3);
@@ -326,11 +326,18 @@ void fetchFile(char byteArray)
 		  //WavePlayBack(waveformat.SampleRate);
 		  UINT bytesread = 0;
 		  f_lseek(&FileRead, 0);
-		   uint8_t tempFile[WaveDataLength/2];
-		  f_read(&FileRead, &tempFile, WaveDataLength/2, &bytesread);
+		  int16_t tempFile[WaveDataLength/4];
+		  f_read(&FileRead, &tempFile, WaveDataLength/4, &bytesread);
 		  mixFiles(audioFile, tempFile);
-		  f_read(&FileRead, &tempFile, WaveDataLength/2, &bytesread);
+
+		  f_read(&FileRead, &tempFile, WaveDataLength/4, &bytesread);
+		  mixFiles(&audioFile[WaveDataLength/4], tempFile);
+
+		  f_read(&FileRead, &tempFile, WaveDataLength/4, &bytesread);
 		  mixFiles(&audioFile[WaveDataLength/2], tempFile);
+
+		  f_read(&FileRead, &tempFile, WaveDataLength/4, &bytesread);
+		  mixFiles(&audioFile[3*WaveDataLength/4], tempFile);
 		  /* Close file */
 		  f_close(&FileRead);
 		}
@@ -344,36 +351,36 @@ void fetchFile(char byteArray)
   playFile(audioFile);
 }
 
-void playFile(uint8_t * audioFile) {
+void playFile(int16_t * audioFile) {
   if(BSP_AUDIO_OUT_Init(OUTPUT_DEVICE_AUTO, 70, 32000) == AUDIO_OK)
 	{
 	  BSP_AUDIO_OUT_Play((uint16_t*)&audioFile[0], WaveDataLength);
 	}
 }
 
-void mixFiles(uint8_t * audioFile, uint8_t * tempFile) {
+void mixFiles(int16_t * audioFile, int16_t * tempFile) {
 	for (int i = 0; i < WaveDataLength/2; i++) {
 			int a = (int) audioFile[i]; // first sample (-32768..32767)
 			int b = (int) tempFile[i]; // second sample
 			int m; // result
-			// Make both samples unsigned (0..65535)
+//			// Make both samples unsigned (0..65535)
 			a += 32768;
 			b += 32768;
-
-			// Pick the equation
+//
+//			// Pick the equation
 			if ((a < 32768) || (b < 32768)) {
 				// Viktor's first equation when both sources are "quiet"
 				// (i.e. less than middle of the dynamic range)
 				m = a * b / 32768;
 			} else {
 				// Viktor's second equation when one or both sources are loud
-				m = 2 * (a + b) - (a * b) / 32768 - 65536;
+				m = 2 * (a + b) - (a * b) / 32768 - 65535;
 			}
-
-			// Output is unsigned (0..65536) so convert back to signed (-32768..32767)
-			if (m == 65536) { m = 65535; };
+//
+//			// Output is unsigned (0..65536) so convert back to signed (-32768..32767)
+			if (m == 65535) { m = 65535; };
 			m -= 32768;
-			audioFile[i] = (uint8_t) m;
+			audioFile[i] = (int16_t) m;
 		}
 }
 /**
