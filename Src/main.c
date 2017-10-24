@@ -224,10 +224,10 @@ int main(void)
 }
 
 void playBeat(int16_t * result) {
-	WavePlayerStop();
+//	WavePlayerStop();
 	CmdIndex = CMD_PLAY;
 	BSP_LED_On(LED5);
-	fetchFile("0:a1.wav");
+	fetchFile(0b1);
 	BSP_LED_Off(LED5);
 }
 
@@ -402,7 +402,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   {
 	  CmdIndex = CMD_PLAY;
 	  BSP_LED_On(LED4);
-	  fetchFile("0:a1.wav"); // TODO: Check that this isn't calling a change buffer method
+	  fetchFile(0b1); // TODO: Check that this isn't calling a change buffer method
 	  HAL_Delay(10);
 	  BSP_LED_Off(LED4);
   }

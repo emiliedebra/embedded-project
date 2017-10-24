@@ -15,8 +15,10 @@
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
-#define AUDIO_BUFFER_SIZE             4096
-
+#define AUDIO_BUFFER_SIZE             4095
+#define STR1(z) 					  #z
+#define STR(z) 						  STR1(z)
+#define JOIN(a,b,c) 				  a STR(b) c
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 
@@ -31,7 +33,8 @@ char* WAVE_NAME = "0:a1.wav";
 //extern int16_t * result;
 /* Audio wave data length to be played */
 static uint32_t WaveDataLength = 0;
-
+// uint8_t tempFile[AUDIO_BUFFER_SIZE]; // this is what is going to next be added to audioFile
+// uint8_t audioFile[AUDIO_BUFFER_SIZE]; // this is what we play in the end
 /* Audio wave remaining data length to be played */
 static __IO uint32_t AudioRemSize = 0;
 
@@ -244,8 +247,8 @@ void BSP_AUDIO_OUT_HalfTransfer_CallBack(void)
 void BSP_AUDIO_OUT_TransferComplete_CallBack(void)
 {
   buffer_offset = BUFFER_OFFSET_FULL;
-  //BSP_AUDIO_OUT_Stop(CODEC_PDWN_HW);
-  BSP_AUDIO_OUT_ChangeBuffer((uint16_t*)&Audio_Buffer[0], AUDIO_BUFFER_SIZE / 2);
+  BSP_AUDIO_OUT_Stop(CODEC_PDWN_HW);
+  //BSP_AUDIO_OUT_ChangeBuffer((uint16_t*)&Audio_Buffer[0], AUDIO_BUFFER_SIZE / 2);
 }
 
 /**
@@ -264,56 +267,90 @@ void BSP_AUDIO_OUT_Error_CallBack(void)
 }
 
 /**
-  * @brief  fetches File
+  * @brief  fetches File and saves it to audioFile
   * @param  None
   * @retval None
   */
-void fetchFile(char * name)
+void fetchFile(char byteArray)
 {
   UINT bytesread = 0;
   char path[] = "0:/";
   char* wavefilename = NULL;
   WAVE_FormatTypeDef waveformat;
-  
-  /* Get the read out protection status */
-  if(f_opendir(&Directory, path) == FR_OK)
-  {
-	 BSP_LED_Off(LED3);
-     wavefilename = name;
-    /* Open the Wave file to be played */
-    if(f_open(&FileRead, wavefilename , FA_READ) != FR_OK)
-    {
-      BSP_LED_On(LED5);
-    }
-    else
-    {
-      /* Read sizeof(WaveFormat) from the selected file */
-      f_read (&FileRead, &waveformat, sizeof(waveformat), &bytesread);
+  uint8_t audioFile[64204];
+  for (int i = 0; i < 8; i++) {
+	if ((byteArray & 0x01) == 1) {
+	/* Get the read out protection status */
+	  if(f_opendir(&Directory, path) == FR_OK)
+	  {
+		 BSP_LED_Off(LED3);
+//		 int someInt = i;
+		wavefilename = "0:a1.wav";
+		/* Open the Wave file to be played */
+		if(f_open(&FileRead, wavefilename , FA_READ) != FR_OK)
+		{
+		  BSP_LED_On(LED5);
+		}
+		else
+		{
+		  /* Read sizeof(WaveFormat) from the selected file */
+		  f_read (&FileRead, &waveformat, sizeof(waveformat), &bytesread);
 
-      /* Set WaveDataLenght to the Speech Wave length */
-      WaveDataLength = waveformat.FileSize;
+		  /* Set WaveDataLenght to the Speech Wave length */
+		  WaveDataLength = waveformat.FileSize;
 
-      /* Play the Wave */
-      //WavePlayBack(waveformat.SampleRate);
-      UINT bytesread = 0;
-      f_lseek(&FileRead, 0);
-	  uint8_t array[WaveDataLength];
-	  f_read(&FileRead, &array[0], WaveDataLength, &bytesread);
-	  /* Close file */
-	  f_close(&FileRead);
-	  if(BSP_AUDIO_OUT_Init(OUTPUT_DEVICE_AUTO, 70, 44100) == AUDIO_OK)
-	    {
-		  BSP_AUDIO_OUT_Play((uint16_t*)&array[0], WaveDataLength);
-	    }
-//	  WavePlayerStop();
-    }
+		  /* Play the Wave */
+		  //WavePlayBack(waveformat.SampleRate);
+		  UINT bytesread = 0;
+		  f_lseek(&FileRead, 0);
+		  uint8_t tempFile[WaveDataLength];
+		  f_read(&FileRead, &tempFile, WaveDataLength, &bytesread);
+		  /* Close file */
+		  f_close(&FileRead);
+		  mixFiles(audioFile, tempFile);
+		}
+	  }
+	  else {
+		  BSP_LED_On(LED3);
+	  }
+	}
+	byteArray = byteArray >> 1;
   }
-  else {
-	  BSP_LED_On(LED3);
-  }
-
+  playFile(audioFile);
 }
 
+void playFile(uint8_t * audioFile) {
+  if(BSP_AUDIO_OUT_Init(OUTPUT_DEVICE_AUTO, 70, 32000) == AUDIO_OK)
+	{
+	  BSP_AUDIO_OUT_Play((uint16_t*)&audioFile[0], WaveDataLength);
+	}
+}
+
+void mixFiles(uint8_t * audioFile, uint8_t * tempFile) {
+	for (int i = 0; i < WaveDataLength; i++) {
+			int a = (int) audioFile[i]; // first sample (-32768..32767)
+			int b = (int) tempFile[i]; // second sample
+			int m; // result
+			// Make both samples unsigned (0..65535)
+			a += 32768;
+			b += 32768;
+
+			// Pick the equation
+			if ((a < 32768) || (b < 32768)) {
+				// Viktor's first equation when both sources are "quiet"
+				// (i.e. less than middle of the dynamic range)
+				m = a * b / 32768;
+			} else {
+				// Viktor's second equation when one or both sources are loud
+				m = 2 * (a + b) - (a * b) / 32768 - 65536;
+			}
+
+			// Output is unsigned (0..65536) so convert back to signed (-32768..32767)
+			if (m == 65536) { m = 65535; };
+			m -= 32768;
+			audioFile[i] = (uint8_t) m;
+		}
+}
 /**
   * @brief Wave player.
   * @param  None

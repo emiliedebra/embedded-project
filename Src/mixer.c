@@ -86,7 +86,7 @@ void mixer(int16_t * track_one, int16_t * track_two, int16_t * result) {
  * saves length to WaveDataLength
  */
 void getTrack(uint8_t audioSampleNumber, int16_t track[]) {
-	char path[] = "0:/";
+//	char path[] = "0:/";
 	UINT bytesread = 0;
 	WAVE_FormatTypeDef waveformat;
 
