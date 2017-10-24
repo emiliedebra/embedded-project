@@ -15,10 +15,7 @@
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 
-#define AUDIO_BUFFER_SIZE             4095
-#define STR1(z) 					  #z
-#define STR(z) 						  STR1(z)
-#define JOIN(a,b,c) 				  a STR(b) c
+#define AUDIO_BUFFER_SIZE             64200
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
 
@@ -277,7 +274,33 @@ void fetchFile(char byteArray)
   char path[] = "0:/";
   char* wavefilename = NULL;
   WAVE_FormatTypeDef waveformat;
-  uint8_t audioFile[64204];
+  uint8_t audioFile[64200];
+  if(f_opendir(&Directory, path) == FR_OK)
+  {
+	 BSP_LED_Off(LED3);
+//		 int someInt = i;
+	wavefilename = "0:a0.wav";
+	/* Open the Wave file to be played */
+	if(f_open(&FileRead, wavefilename , FA_READ) != FR_OK)
+	{
+	  BSP_LED_On(LED5);
+	}
+	else
+	{
+	  /* Read sizeof(WaveFormat) from the selected file */
+	  f_read (&FileRead, &waveformat, sizeof(waveformat), &bytesread);
+
+	  /* Set WaveDataLenght to the Speech Wave length */
+	  WaveDataLength = waveformat.FileSize;
+
+	  /* Play the Wave */
+	  //WavePlayBack(waveformat.SampleRate);
+	  UINT bytesread = 0;
+	  f_lseek(&FileRead, 0);
+	  f_read(&FileRead, &audioFile, WaveDataLength, &bytesread);
+
+	}
+  }
   for (int i = 0; i < 8; i++) {
 	if ((byteArray & 0x01) == 1) {
 	/* Get the read out protection status */
@@ -303,11 +326,13 @@ void fetchFile(char byteArray)
 		  //WavePlayBack(waveformat.SampleRate);
 		  UINT bytesread = 0;
 		  f_lseek(&FileRead, 0);
-		  uint8_t tempFile[WaveDataLength];
-		  f_read(&FileRead, &tempFile, WaveDataLength, &bytesread);
+		   uint8_t tempFile[WaveDataLength/2];
+		  f_read(&FileRead, &tempFile, WaveDataLength/2, &bytesread);
+		  mixFiles(audioFile, tempFile);
+		  f_read(&FileRead, &tempFile, WaveDataLength/2, &bytesread);
+		  mixFiles(&audioFile[WaveDataLength/2], tempFile);
 		  /* Close file */
 		  f_close(&FileRead);
-		  mixFiles(audioFile, tempFile);
 		}
 	  }
 	  else {
@@ -327,7 +352,7 @@ void playFile(uint8_t * audioFile) {
 }
 
 void mixFiles(uint8_t * audioFile, uint8_t * tempFile) {
-	for (int i = 0; i < WaveDataLength; i++) {
+	for (int i = 0; i < WaveDataLength/2; i++) {
 			int a = (int) audioFile[i]; // first sample (-32768..32767)
 			int b = (int) tempFile[i]; // second sample
 			int m; // result
